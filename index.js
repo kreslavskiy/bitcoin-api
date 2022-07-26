@@ -2,13 +2,44 @@
 
 const axios = require('axios');
 const cheerio = require('cheerio');
+const fs = require('fs');
 
 module.exports = class BitcoinRate {
-  constructor() {
-    this.rate; // Exchange rate of 1 BTC in UAH
+  async createDatabase() {
+    const db = {
+      currentRate: 0,
+      people: [],
+    };
+    const content = JSON.stringify(db);
+    await fs.promises.appendFile(`${process.cwd()}/database.json`, content);
   }
 
-  async parse() {
+  async getDatabase() {
+    if (!fs.existsSync('database.json')) await this.createDatabase();
+    const content = fs.readFileSync('database.json', 'utf-8');
+    const db = JSON.parse(content);
+    return db;
+  }
+
+  async getAllEmails () {
+    const emails = new Array();
+    const db = await this.getDatabase();
+    for (const subscriber of db.people) {
+      if (!emails.includes(subscriber.email)) emails.push(subscriber.email);
+    }
+    return emails;
+  }
+
+  async subscribe(name, email) {
+    const db = await this.getDatabase();
+    const allMails = await this.getAllEmails();
+    if (!allMails.includes(email)) {
+      db.people.push({ name, email });
+      await fs.promises.writeFile('database.json', JSON.stringify(db));
+    }
+  }
+
+  async currentRate() {
     try {
       const data = await axios
         .get('https://uabanks.com.ua/kurs/btc/')
@@ -20,11 +51,10 @@ module.exports = class BitcoinRate {
           return text;
         });
       const exchangeRate = data.slice(0, data.indexOf('.')).replace(' ', '');
-      this.rate = Number(exchangeRate);
+      return Number(exchangeRate);
     } catch (error) {
       const red = '\x1b[31m';
       console.log(red, error.message, '\x1b[0m');
     }
-    return this.rate;
   }
 };
