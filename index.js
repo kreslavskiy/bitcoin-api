@@ -5,7 +5,7 @@ const cheerio = require('cheerio');
 const fs = require('fs');
 
 module.exports = class BitcoinRate {
-  async createDatabase() {
+  async #createDatabase() {
     const db = {
       currentRate: 0,
       people: [],
@@ -14,16 +14,16 @@ module.exports = class BitcoinRate {
     await fs.promises.appendFile(`${process.cwd()}/database.json`, content);
   }
 
-  async getDatabase() {
-    if (!fs.existsSync('database.json')) await this.createDatabase();
+  async #getDatabase() {
+    if (!fs.existsSync('database.json')) await this.#createDatabase();
     const content = fs.readFileSync('database.json', 'utf-8');
     const db = JSON.parse(content);
     return db;
   }
 
-  async getAllEmails () {
+  async #getAllEmails () {
     const emails = new Array();
-    const db = await this.getDatabase();
+    const db = await this.#getDatabase();
     for (const subscriber of db.people) {
       if (!emails.includes(subscriber.email)) emails.push(subscriber.email);
     }
@@ -31,8 +31,8 @@ module.exports = class BitcoinRate {
   }
 
   async subscribe(name, email) {
-    const db = await this.getDatabase();
-    const allMails = await this.getAllEmails();
+    const db = await this.#getDatabase();
+    const allMails = await this.#getAllEmails();
     if (!allMails.includes(email)) {
       db.people.push({ name, email });
       await fs.promises.writeFile('database.json', JSON.stringify(db));
@@ -40,6 +40,7 @@ module.exports = class BitcoinRate {
   }
 
   async currentRate() {
+    const db = await this.#getDatabase();
     try {
       const data = await axios
         .get('https://uabanks.com.ua/kurs/btc/')
@@ -51,7 +52,9 @@ module.exports = class BitcoinRate {
           return text;
         });
       const exchangeRate = data.slice(0, data.indexOf('.')).replace(' ', '');
-      return Number(exchangeRate);
+      db.currentRate = Number(exchangeRate);
+      await fs.promises.writeFile('database.json', JSON.stringify(db));
+      return db.currentRate;
     } catch (error) {
       const red = '\x1b[31m';
       console.log(red, error.message, '\x1b[0m');
