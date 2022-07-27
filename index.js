@@ -7,7 +7,7 @@ const fs = require('fs');
 module.exports = class BitcoinRate {
   async #createDatabase() {
     const db = {
-      currentRate: 0,
+      rate: 0,
       people: [],
     };
     const content = JSON.stringify(db);
@@ -21,7 +21,7 @@ module.exports = class BitcoinRate {
     return db;
   }
 
-  async #getAllEmails () {
+  async #getAllEmails() {
     const emails = new Array();
     const db = await this.#getDatabase();
     for (const subscriber of db.people) {
@@ -30,7 +30,13 @@ module.exports = class BitcoinRate {
     return emails;
   }
 
+  validateEmail(email) {
+    const regex = new RegExp('[a-z0-9]+@[a-z]+\.[a-z]{2,3}');
+    if(!regex.test(email)) throw new Error('Bad email');
+  }
+
   async subscribe(name, email) {
+    this.validateEmail(email);
     const db = await this.#getDatabase();
     const allMails = await this.#getAllEmails();
     if (!allMails.includes(email)) {
@@ -52,12 +58,28 @@ module.exports = class BitcoinRate {
           return text;
         });
       const exchangeRate = data.slice(0, data.indexOf('.')).replace(' ', '');
-      db.currentRate = Number(exchangeRate);
+      db.rate = Number(exchangeRate);
       await fs.promises.writeFile('database.json', JSON.stringify(db));
-      return db.currentRate;
+      return db.rate;
     } catch (error) {
       const red = '\x1b[31m';
       console.log(red, error.message, '\x1b[0m');
+    }
+  }
+
+  async checkRateChanges() {
+    const db = await this.#getDatabase();
+    const previosRate = db.rate;
+    const currentRate = await this.currentRate();
+    return previosRate === currentRate;
+  }
+
+  async informAboutRate() {
+    const isChanged = await this.checkRateChanges();
+    if (isChanged) {
+      // send email that the rate has changed with current and previous rates
+    } else {
+      // send email just with current rate
     }
   }
 };
