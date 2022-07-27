@@ -30,13 +30,13 @@ module.exports = class BitcoinRate {
     return emails;
   }
 
-  validateEmail(email) {
+  #validateEmail(email) {
     const regex = new RegExp('[a-z0-9]+@[a-z]+\.[a-z]{2,3}');
     if(!regex.test(email)) throw new Error('Bad email');
   }
 
   async subscribe(name, email) {
-    this.validateEmail(email);
+    this.#validateEmail(email);
     const db = await this.#getDatabase();
     const allMails = await this.#getAllEmails();
     if (!allMails.includes(email)) {
