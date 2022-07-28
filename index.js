@@ -85,25 +85,24 @@ module.exports = class BitcoinRate {
     return previosRate === currentRate;
   }
 
-  async #sendEmail (from, message) {
+  async #sendEmail (from, message, address) {
     const allMails = (await this.#getAllEmails()).join(',');
     await this.transporter.sendMail({
       from: `"${from}" <btcapigenesis@gmail.com>`,
-      to: allMails,
+      to: address,
       subject: 'Current BTC rate',
       text: message,
     });
   }
 
   async informAboutRate(senderName) {
-    const previousRate = (await this.#getDatabase()).rate;
+    const db = (await this.#getDatabase());
     const isChanged = await this.checkRateChanges();
-    if (isChanged) {
-      const text = `BTC rate has changed, now it is ${await this.currentRate()} UAH!`;
-      await this.#sendEmail(senderName, text)
-    } else {
-      const message = `Current BTC rate is ${previousRate} UAH`
-      await this.#sendEmail(senderName, message);
+    let message = '';
+    if (isChanged) message = `BTC rate has changed, now it is ${await this.currentRate()} UAH!`;
+    else message = `current BTC rate is ${db.rate} UAH`;
+    for (const subscriber of db.people) {
+      await this.#sendEmail(senderName, `Hi, ${subscriber.name}, ` + message, subscriber.email);
     }
   }
 };
