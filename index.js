@@ -82,7 +82,7 @@ module.exports = class BitcoinRate {
     const db = await this.#getDatabase();
     const previosRate = db.rate;
     const currentRate = await this.currentRate();
-    return previosRate === currentRate;
+    return previosRate !== currentRate;
   }
 
   async #sendEmail (from, message, address) {
