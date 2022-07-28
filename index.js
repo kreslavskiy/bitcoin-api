@@ -3,8 +3,19 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
+const nodemailer = require('nodemailer');
 
 module.exports = class BitcoinRate {
+  constructor() {
+    this.transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'btcapigenesis@gmail.com',
+        pass: 'tggochwudsnvlgvy',
+      },
+    });
+  }
+
   async #createDatabase() {
     const db = {
       rate: 0,
@@ -31,8 +42,8 @@ module.exports = class BitcoinRate {
   }
 
   #validateEmail(email) {
-    const regex = new RegExp('[a-z0-9]+@[a-z]+\.[a-z]{2,3}');
-    if(!regex.test(email)) throw new Error('Bad email');
+    const regex = new RegExp('[a-z0-9]+@[a-z]+.[a-z]{2,3}');
+    if (!regex.test(email)) throw new Error('Bad email');
   }
 
   async subscribe(name, email) {
@@ -74,12 +85,25 @@ module.exports = class BitcoinRate {
     return previosRate === currentRate;
   }
 
-  async informAboutRate() {
+  async #sendEmail (from, message) {
+    const allMails = (await this.#getAllEmails()).join(',');
+    await this.transporter.sendMail({
+      from: `"${from}" <btcapigenesis@gmail.com>`,
+      to: allMails,
+      subject: 'Current BTC rate',
+      text: message,
+    });
+  }
+
+  async informAboutRate(senderName) {
+    const previousRate = (await this.#getDatabase()).rate;
     const isChanged = await this.checkRateChanges();
     if (isChanged) {
-      // send email that the rate has changed with current and previous rates
+      const text = `BTC rate has changed, now it is ${await this.currentRate()} UAH!`;
+      await this.#sendEmail(senderName, text)
     } else {
-      // send email just with current rate
+      const message = `Current BTC rate is ${previousRate} UAH`
+      await this.#sendEmail(senderName, message);
     }
   }
 };
