@@ -1,11 +1,12 @@
 'use strict';
 
-const BitcoinRate = require('./index.js');
+const btc = require('./btc-api');
 
 const test = async () => {
-  const api = new BitcoinRate();
-  await api.subscribe('Misha', 'mishak1000236@gmail.com');
-  await api.informAboutRate('My BTC app');
+  const curr = await btc.currentRate(); 
+  console.log(curr);
+  await btc.subscribe('Misha', 'mishak1000236@gmail.com');
+  await btc.informAboutRate('my app'); 
 };
 
 test();
